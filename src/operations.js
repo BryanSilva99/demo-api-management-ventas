@@ -5,13 +5,13 @@ const quantity = { name: 'cantidad', label: 'Cantidad', type: 'number', min: 1, 
 
 export const inventoryOperations = [
   { id: 'consultarProducto', label: 'Consultar producto', description: 'Busca un producto para revisar su stock disponible.', fields: [productId], success: 'Producto encontrado' },
-  { id: 'crearProducto', label: 'Crear producto', description: 'Registra un producto con su stock inicial.', fields: [productId, { name: 'nombre', label: 'Nombre', placeholder: 'Nombre del producto' }, { name: 'stockDisponible', label: 'Stock inicial', type: 'number', min: 0, step: 1, max: Number.MAX_SAFE_INTEGER }], success: 'Producto creado' },
+  { id: 'crearProducto', label: 'Crear producto', description: 'Registra un producto con su stock inicial.', fields: [{ name: 'nombre', label: 'Nombre', placeholder: 'Nombre del producto' }, { name: 'precio', label: 'Precio de venta (S/)', type: 'number', min: 0.01, max: 9999999999.99, step: 0.01 }, { name: 'stockDisponible', label: 'Stock inicial', type: 'number', min: 0, step: 1, max: Number.MAX_SAFE_INTEGER }], success: 'Producto creado' },
   { id: 'reservarStock', label: 'Reservar stock', description: 'Reserva unidades de un producto. La cantidad se descontará del stock disponible.', fields: [productId, quantity], success: 'Stock reservado' },
 ];
 export const orderOperations = [
   { id: 'crearPedido', label: 'Crear pedido', description: 'Crea un pedido vacío en estado PENDIENTE. Después podrás agregar sus items.', fields: [], success: 'Pedido creado' },
   { id: 'consultarPedido', label: 'Consultar pedido', description: 'Revisa el estado, el total y los items de un pedido.', fields: [orderId], success: 'Pedido encontrado' },
-  { id: 'agregarItem', label: 'Agregar item', description: 'Agrega un producto a un pedido pendiente.', fields: [orderId, productId, { ...quantity, max: 2147483647 }, { name: 'precioUnitario', label: 'Precio unitario', type: 'number', min: 0, step: 'any' }], success: 'Item agregado' },
+  { id: 'agregarItem', label: 'Agregar item', description: 'Agrega un producto a un pedido pendiente.', fields: [orderId, productId, { ...quantity, max: 2147483647 }], success: 'Item agregado' },
   { id: 'confirmarPedido', label: 'Confirmar pedido', description: 'Confirma un pedido pendiente que tenga al menos un item.', fields: [orderId], success: 'Pedido confirmado' },
 ];
 
@@ -41,18 +41,35 @@ export function buildOperation(action, values) {
     case 'crearProducto': {
       const nombre = String(values.nombre ?? '').trim();
       if (!nombre) throw new Error('Introduce el nombre del producto.');
-      return { method: 'POST', endpoint: '/productos', body: { productoId: productoId(), nombre, stockDisponible: integer(values.stockDisponible, 'Stock inicial', 0) } };
+      return { method: 'POST', endpoint: '/productos', body: { nombre, precio: validPrice(values.precio), stockDisponible: integer(values.stockDisponible, 'Stock inicial', 0) } };
     }
     case 'reservarStock': return { method: 'POST', endpoint: `/productos/${productoId()}/reservar`, body: { cantidad: integer(values.cantidad, 'Cantidad') } };
     case 'crearPedido': return { method: 'POST', endpoint: '/pedidos' };
     case 'consultarPedido': return { method: 'GET', endpoint: pedidoPath(values.pedidoId) };
     case 'agregarItem': {
-      const price = String(values.precioUnitario ?? '').trim();
-      const precioUnitario = Number(price);
-      if (!price || !Number.isFinite(precioUnitario) || precioUnitario < 0) throw new Error('Introduce un precio unitario mayor o igual a cero.');
-      return { method: 'POST', endpoint: `${pedidoPath(values.pedidoId)}/items`, body: { productoId: productoId(), cantidad: integer(values.cantidad, 'Cantidad', 1, 2147483647), precioUnitario } };
+      const item = saleItem(values.product, values.cantidad);
+      return { method: 'POST', endpoint: `${pedidoPath(values.pedidoId)}/items`, body: item };
     }
     case 'confirmarPedido': return { method: 'POST', endpoint: `${pedidoPath(values.pedidoId)}/confirmar` };
     default: throw new Error('Operación desconocida.');
   }
+}
+
+export function validPrice(value) {
+  if (typeof value !== 'number' && typeof value !== 'string') throw new Error('El producto debe tener un precio válido.');
+  const price = Number(value);
+  if (!String(value).trim() || !Number.isFinite(price) || price <= 0 || price > 9999999999.99 || Math.abs(price * 100 - Math.round(price * 100)) > 0.001)
+    throw new Error('Introduce un precio mayor que cero con hasta dos decimales.');
+  return price;
+}
+export function saleItem(product, quantity) {
+  if (!product) throw new Error('Selecciona un producto.');
+  const cantidad = integer(quantity, 'Cantidad', 1, 2147483647);
+  if (!Number.isSafeInteger(product.stockDisponible) || product.stockDisponible < 0) throw new Error('Stock no disponible.');
+  if (cantidad > product.stockDisponible) throw new Error('La cantidad supera el stock disponible.');
+  return { productoId: integer(product.productoId, 'Producto ID'), cantidad, precioUnitario: validPrice(product.precio) };
+}
+export function saleSubtotal(product, quantity) {
+  const item = saleItem(product, quantity);
+  return Math.round(item.precioUnitario * 100) * item.cantidad / 100;
 }

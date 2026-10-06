@@ -87,7 +87,9 @@ export function useSales() {
     const reading = action.startsWith("consultar");
     const kind = inventory ? "products" : "orders";
     try {
-      const data = await call(action, values);
+      const data = await call(action, action === "agregarItem"
+        ? { ...values, product: products?.find(item => String(item.productoId) === String(values.productoId)) }
+        : values);
       // Guardar primero la respuesta de escritura: un refresh fallido no la borra.
       if (inventory) {
         setProduct(data);

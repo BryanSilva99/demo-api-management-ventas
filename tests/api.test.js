@@ -4,12 +4,12 @@ import { buildOperation } from '../src/operations.js';
 import { BASE_URL, requestApi } from '../src/api.js';
 
 const id = 'd975494b-3d64-4652-a872-0be4c19cc74b';
-const values = { productoId: '100', nombre: 'Teclado', stockDisponible: '0', pedidoId: id, cantidad: '2', precioUnitario: '12.50' };
+const values = { productoId: '100', nombre: 'Teclado', stockDisponible: '0', pedidoId: id, cantidad: '2', precio: '12.50', product: { productoId: 100, precio: 12.5, stockDisponible: 20 } };
 const contracts = [
   ['listarProductos', 'GET', '/productos', undefined],
   ['listarPedidos', 'GET', '/pedidos', undefined],
   ['consultarProducto', 'GET', '/productos/100', undefined],
-  ['crearProducto', 'POST', '/productos', { productoId: 100, nombre: 'Teclado', stockDisponible: 0 }],
+  ['crearProducto', 'POST', '/productos', { nombre: 'Teclado', precio: 12.5, stockDisponible: 0 }],
   ['reservarStock', 'POST', '/productos/100/reservar', { cantidad: 2 }],
   ['crearPedido', 'POST', '/pedidos', undefined],
   ['consultarPedido', 'GET', `/pedidos/${id}`, undefined],
@@ -43,13 +43,13 @@ test('Los nueve contratos coinciden con los DTO y controladores y solo usan Gate
 test('Valida entradas vacías, UUID, enteros, límites y precio antes de enviar', () => {
   for (const [action, changes] of [
     ['crearProducto', { nombre: '  ' }], ['crearProducto', { stockDisponible: '-1' }],
-    ['crearProducto', { productoId: '9007199254740993' }], ['reservarStock', { cantidad: '1.5' }],
+    ['consultarProducto', { productoId: '9007199254740993' }], ['reservarStock', { cantidad: '1.5' }],
     ['reservarStock', { cantidad: '0' }], ['consultarProducto', { productoId: '../pedidos' }],
     ['consultarPedido', { pedidoId: 'no-uuid' }], ['agregarItem', { cantidad: '2147483648' }],
-    ['agregarItem', { precioUnitario: '-1' }], ['agregarItem', { precioUnitario: '' }],
-    ['agregarItem', { precioUnitario: 'Infinity' }],
+    ['agregarItem', { product: { productoId: 100, precio: -1, stockDisponible: 20 } }], ['crearProducto', { precio: '' }],
+    ['crearProducto', { precio: 'Infinity' }],
   ]) assert.throws(() => buildOperation(action, { ...values, ...changes }));
-  assert.equal(buildOperation('agregarItem', { ...values, precioUnitario: '0' }).body.precioUnitario, 0);
+  assert.equal(buildOperation('agregarItem', { ...values, precioUnitario: '999' }).body.precioUnitario, 12.5);
 });
 
 test('Conserva códigos HTTP y mensajes del Gateway y los microservicios', async (t) => {

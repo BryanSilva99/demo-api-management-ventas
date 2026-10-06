@@ -5,6 +5,7 @@ import {
   Modal,
   OperationForm,
 } from "../components/Common.jsx";
+import { money } from "../presentation.js";
 export default function Inventory({ model }) {
   const [creating, setCreating] = useState(false);
   const selected =
@@ -41,6 +42,7 @@ export default function Inventory({ model }) {
               <thead>
                 <tr>
                   <th>Producto</th>
+                  <th>Precio</th>
                   <th>Stock</th>
                   <th>Estado</th>
                   <th>
@@ -62,6 +64,7 @@ export default function Inventory({ model }) {
                       <strong>{product.nombre}</strong>
                       <small>ID #{product.productoId}</small>
                     </td>
+                    <td className="nowrap">{money(product.precio)}</td>
                     <td>{product.stockDisponible}</td>
                     <td>
                       <Badge stock={product.stockDisponible} />
@@ -98,6 +101,7 @@ export default function Inventory({ model }) {
             <>
               <h2>{selected.nombre}</h2>
               <p className="muted">Producto #{selected.productoId}</p>
+              <p>Precio <strong>{money(selected.precio)}</strong></p>
               <Badge stock={selected.stockDisponible} />
               <p className="stock">
                 Stock disponible <strong>{selected.stockDisponible}</strong>
@@ -138,7 +142,7 @@ export default function Inventory({ model }) {
           }}
         >
           <p className="muted">
-            Registra su identificador, nombre y stock inicial.
+            Registra nombre, precio de venta y stock inicial. El ID se genera automáticamente.
           </p>
           <OperationForm
             action="crearProducto"

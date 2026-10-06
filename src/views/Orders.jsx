@@ -1,3 +1,4 @@
+import { SaleItemForm } from "../components/SaleItemForm.jsx";
 import { useState } from "react";
 import { money, shortId } from "../presentation.js";
 import { Badge, LoadState, OperationForm } from "../components/Common.jsx";
@@ -98,14 +99,13 @@ export default function Orders({ model, openOrder }) {
                   <h3>Agregar producto</h3>
                   <LoadState model={model} kind="products" />
                   {model.products?.length ? (
-                    <OperationForm
+                    <SaleItemForm
                       key={order.id}
-                      action="agregarItem"
                       products={model.products}
-                      fixed={{ pedidoId: order.id }}
+
                       busy={model.busy}
                       label="Agregar al pedido"
-                      submit={(values) => model.run("agregarItem", values)}
+                      submit={(values) => model.run("agregarItem", { ...values, pedidoId: order.id })}
                     />
                   ) : (
                     <p className="muted">
